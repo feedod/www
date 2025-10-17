@@ -132,13 +132,14 @@
     }
 
     /**
-     * Создает ребра куба для соединения граней
-     * @param {THREE.Group} group - Группа для добавления ребер
+     * Создает каркас куба (ребра и углы) для соединения граней
+     * @param {THREE.Group} group - Группа для добавления ребер и углов
      * @param {number} radius - Половина длины ребра куба
      * @returns {void}
      */
-    function createCubeEdges(group, radius) {
-      const material = new THREE.LineBasicMaterial({ color: 0x808080 }); // Серые линии
+    function createCubeFrame(group, radius) {
+      // Ребра куба
+      const lineMaterial = new THREE.LineBasicMaterial({ color: 0x808080 }); // Серые линии
       const vertices = [
         // Вершины куба
         new THREE.Vector3(-radius, -radius, -radius),
@@ -160,8 +161,17 @@
 
       edges.forEach(([start, end]) => {
         const geometry = new THREE.BufferGeometry().setFromPoints([vertices[start], vertices[end]]);
-        const line = new THREE.Line(geometry, material);
+        const line = new THREE.Line(geometry, lineMaterial);
         group.add(line);
+      });
+
+      // Углы куба (сферы в вершинах)
+      const sphereGeometry = new THREE.SphereGeometry(radius * 0.05, 16, 16); // Радиус сферы 5% от радиуса куба
+      const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 }); // Серый цвет
+      vertices.forEach(vertex => {
+        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        sphere.position.copy(vertex);
+        group.add(sphere);
       });
     }
 
@@ -183,7 +193,15 @@
       // Настройка рендера
       const renderer = new CSS3DRenderer();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.domElement.style.width = '100%';
+      renderer.domElement.style.height = '100%';
       container.appendChild(renderer.domElement);
+
+      // Настройка управления камерой
+      const controls = new TrackballControls(camera, renderer.domElement);
+      controls.rotateSpeed = 4;
+      controls.minDistance = 500;
+      controls.maxDistance = 3000;
 
       // Создание группы с виджетами
       const group = new THREE.Group();
@@ -259,21 +277,21 @@
         group.add(object);
       });
 
-      // Добавление ребер куба
-      createCubeEdges(group, radius);
+      // Добавление каркаса куба (ребра и углы)
+      createCubeFrame(group, radius);
 
       scene.add(group);
 
-      // Настройка управления камерой
-      const controls = new TrackballControls(camera, renderer.domElement);
-      controls.rotateSpeed = 4;
-
-      // Обработка изменения размера окна
-      window.addEventListener('resize', () => {
+      // Обработка изменения размера окна и масштабирования
+      function onWindowResize() {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
-      });
+        renderer.domElement.style.width = '100%';
+        renderer.domElement.style.height = '100%';
+        controls.handleResize(); // Обновление управления
+      }
+      window.addEventListener('resize', onWindowResize);
 
       // Блокировка событий iframe при взаимодействии с камерой
       const blocker = document.getElementById('blocker');
