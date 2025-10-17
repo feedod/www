@@ -77,9 +77,18 @@
      * @param {string} config.width - Ширина элемента (для div и iframe, например, '480px')
      * @param {string} config.height - Высота элемента (для div и iframe, например, '360px')
      * @param {string} config.backgroundColor - Цвет фона div (например, '#000')
-     * @returns {CSS3DObject} Объект для сцены
+     * @returns {Object} Объект сцены и ширина виджета
+     * @throws {Error} Если параметры отсутствуют или некорректны
      */
     function createElement({ src, width, height, backgroundColor }) {
+      // Проверка входных параметров
+      if (!src || !width || !height || !backgroundColor) {
+        throw new Error('Все параметры (src, width, height, backgroundColor) должны быть указаны');
+      }
+      if (isNaN(parseFloat(width)) || isNaN(parseFloat(height))) {
+        throw new Error('Ширина и высота должны быть числовыми значениями (например, "480px")');
+      }
+
       const div = document.createElement('div');
       div.style.width = width;
       div.style.height = height;
@@ -94,43 +103,74 @@
 
       const object = new CSS3DObject(div);
 
-      // Автоматическое определение позиции и поворота на основе размера
-      const widthValue = parseFloat(width); // Извлекаем числовое значение ширины
-      const radius = widthValue * 0.75; // Половина длины ребра куба
-
       // Определение граней куба: позиция (x, y, z) и повороты (rx, ry)
       const cubeFaces = [
-        { x: 0, y: 0, z: radius, rx: 0, ry: 0 }, // Передняя грань
-        { x: 0, y: 0, z: -radius, rx: 0, ry: Math.PI }, // Задняя грань
-        { x: -radius, y: 0, z: 0, rx: 0, ry: -Math.PI / 2 }, // Левая грань
-        { x: radius, y: 0, z: 0, rx: 0, ry: Math.PI / 2 }, // Правая грань
-        { x: 0, y: radius, z: 0, rx: -Math.PI / 2, ry: 0 }, // Верхняя грань
-        { x: 0, y: -radius, z: 0, rx: Math.PI / 2, ry: 0 } // Нижняя грань
+        { x: 0, y: 0, z: 1, rx: 0, ry: 0 }, // Передняя грань
+        { x: 0, y: 0, z: -1, rx: 0, ry: Math.PI }, // Задняя грань
+        { x: -1, y: 0, z: 0, rx: 0, ry: -Math.PI / 2 }, // Левая грань
+        { x: 1, y: 0, z: 0, rx: 0, ry: Math.PI / 2 }, // Правая грань
+        { x: 0, y: 1, z: 0, rx: -Math.PI / 2, ry: 0 }, // Верхняя грань
+        { x: 0, y: -1, z: 0, rx: Math.PI / 2, ry: 0 } // Нижняя грань
       ];
 
       // Выбор грани по индексу элемента (максимум 6 граней)
       const face = cubeFaces[Math.min(elementCounter, cubeFaces.length - 1)];
 
-      // Установка позиции и поворотов
+      // Установка позиции и поворотов (позиции будут масштабированы позже)
       object.position.set(face.x, face.y, face.z);
-      object.rotation.x = face.rx || 0; // Поворот по X (для верхней/нижней грани)
-      object.rotation.y = face.ry || 0; // Поворот по Y
+      object.rotation.x = face.rx || 0;
+      object.rotation.y = face.ry || 0;
 
-      elementCounter++; // Увеличиваем счетчик для следующего элемента
+      elementCounter++; // Увеличиваем счетчик
 
-      return object;
+      return { object, width: parseFloat(width) }; // Возвращаем объект и ширину
+    }
+
+    /**
+     * Создает ребра куба для соединения граней
+     * @param {THREE.Group} group - Группа для добавления ребер
+     * @param {number} radius - Половина длины ребра куба
+     * @returns {void}
+     */
+    function createCubeEdges(group, radius) {
+      const material = new THREE.LineBasicMaterial({ color: 0xffffff }); // Белые линии
+      const vertices = [
+        // Вершины куба
+        new THREE.Vector3(-radius, -radius, -radius),
+        new THREE.Vector3(radius, -radius, -radius),
+        new THREE.Vector3(radius, radius, -radius),
+        new THREE.Vector3(-radius, radius, -radius),
+        new THREE.Vector3(-radius, -radius, radius),
+        new THREE.Vector3(radius, -radius, radius),
+        new THREE.Vector3(radius, radius, radius),
+        new THREE.Vector3(-radius, radius, radius)
+      ];
+
+      // Ребра куба (индексы вершин для соединения)
+      const edges = [
+        [0, 1], [1, 2], [2, 3], [3, 0], // Нижняя грань
+        [4, 5], [5, 6], [6, 7], [7, 4], // Верхняя грань
+        [0, 4], [1, 5], [2, 6], [3, 7] // Боковые ребра
+      ];
+
+      edges.forEach(([start, end]) => {
+        const geometry = new THREE.BufferGeometry().setFromPoints([vertices[start], vertices[end]]);
+        const line = new THREE.Line(geometry, material);
+        group.add(line);
+      });
     }
 
     /**
      * Инициализация сцены, камеры, рендера и управления
      * @returns {void}
+     * @throws {Error} Если количество виджетов вне диапазона 4–6
      */
     function init() {
       const container = document.getElementById('container');
 
-      // Настройка камеры
+      // Настройка камеры (увеличенное расстояние)
       const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
-      camera.position.set(500, 350, 750);
+      camera.position.set(750, 525, 1125); // Увеличено в 1.5 раза от (500, 350, 750)
 
       // Создание сцены
       const scene = new THREE.Scene();
@@ -142,43 +182,81 @@
 
       // Создание группы с виджетами
       const group = new THREE.Group();
-      group.add(createElement({
-        src: 'https://www.youtube.com/embed/SJOz3qjfQXU?rel=0',
-        width: '480px',
-        height: '360px',
-        backgroundColor: '#000'
-      }));
-      group.add(createElement({
-        src: 'https://www.youtube.com/embed/Y2-xZ-1HE-Q?rel=0',
-        width: '480px',
-        height: '360px',
-        backgroundColor: '#000'
-      }));
-      group.add(createElement({
-        src: 'https://www.youtube.com/embed/IrydklNpcFI?rel=0',
-        width: '480px',
-        height: '360px',
-        backgroundColor: '#000'
-      }));
-      group.add(createElement({
-        src: 'https://www.youtube.com/embed/9ubytEsCaS0?rel=0',
-        width: '480px',
-        height: '360px',
-        backgroundColor: '#000'
-      }));
-      // Добавьте дополнительные виджеты (до 6) при необходимости, например:
-      // group.add(createElement({
-      //   src: 'https://www.youtube.com/embed/ANOTHER_ID?rel=0',
-      //   width: '480px',
-      //   height: '360px',
-      //   backgroundColor: '#000'
-      // }));
-      // group.add(createElement({
-      //   src: 'https://www.youtube.com/embed/ANOTHER_ID?rel=0',
-      //   width: '480px',
-      //   height: '360px',
-      //   backgroundColor: '#000'
-      // }));
+      let maxWidth = 0;
+
+      // Определение виджетов
+      const widgets = [
+        {
+          src: 'https://www.youtube.com/embed/SJOz3qjfQXU?rel=0',
+          width: '480px',
+          height: '360px',
+          backgroundColor: '#000'
+        },
+        {
+          src: 'https://www.youtube.com/embed/Y2-xZ-1HE-Q?rel=0',
+          width: '400px', // Разный размер
+          height: '300px',
+          backgroundColor: '#000'
+        },
+        {
+          src: 'https://www.youtube.com/embed/IrydklNpcFI?rel=0',
+          width: '520px', // Разный размер
+          height: '390px',
+          backgroundColor: '#000'
+        },
+        {
+          src: 'https://www.youtube.com/embed/9ubytEsCaS0?rel=0',
+          width: '480px',
+          height: '360px',
+          backgroundColor: '#000'
+        }
+        // Добавьте дополнительные виджеты (до 6) при необходимости, например:
+        // {
+        //   src: 'https://www.youtube.com/embed/ANOTHER_ID?rel=0',
+        //   width: '500px',
+        //   height: '375px',
+        //   backgroundColor: '#000'
+        // },
+        // {
+        //   src: 'https://www.youtube.com/embed/ANOTHER_ID?rel=0',
+        //   width: '450px',
+        //   height: '338px',
+        //   backgroundColor: '#000'
+        // }
+      ];
+
+      // Проверка количества виджетов
+      if (widgets.length < 4 || widgets.length > 6) {
+        throw new Error('Количество виджетов должно быть от 4 до 6');
+      }
+
+      // Добавление виджетов и расчет максимальной ширины
+      const widgetObjects = widgets.map(widget => {
+        const { object, width } = createElement(widget);
+        maxWidth = Math.max(maxWidth, width);
+        return object;
+      });
+
+      // Масштабирование позиций виджетов на основе максимальной ширины
+      const radius = maxWidth * 0.75; // Половина длины ребра куба
+      widgetObjects.forEach((object, index) => {
+        const face = [
+          { x: 0, y: 0, z: radius, rx: 0, ry: 0 }, // Передняя
+          { x: 0, y: 0, z: -radius, rx: 0, ry: Math.PI }, // Задняя
+          { x: -radius, y: 0, z: 0, rx: 0, ry: -Math.PI / 2 }, // Левая
+          { x: radius, y: 0, z: 0, rx: 0, ry: Math.PI / 2 }, // Правая
+          { x: 0, y: radius, z: 0, rx: -Math.PI / 2, ry: 0 }, // Верхняя
+          { x: 0, y: -radius, z: 0, rx: Math.PI / 2, ry: 0 } // Нижняя
+        ][index];
+        object.position.set(face.x, face.y, face.z);
+        object.rotation.x = face.rx || 0;
+        object.rotation.y = face.ry || 0;
+        group.add(object);
+      });
+
+      // Добавление ребер куба
+      createCubeEdges(group, radius);
+
       scene.add(group);
 
       // Настройка управления камерой
@@ -211,8 +289,13 @@
       animate();
     }
 
-    // Запуск приложения
-    init();
+    // Запуск приложения с обработкой ошибок
+    try {
+      init();
+    } catch (error) {
+      console.error('Ошибка инициализации:', error.message);
+      alert(`Ошибка: ${error.message}`);
+    }
   </script>
 </body>
 </html>
