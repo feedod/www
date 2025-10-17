@@ -1,176 +1,200 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
-    <meta name="theme-color" content="#ffffff" />
-    <title>fs. — Полная версия на A-Frame</title>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#ffffff">
+  <title>fs.</title>
+  <style>
+    /**
+     * Стили для чистого и адаптивного дизайна
+     */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #ffffff;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
 
-    <!-- A-Frame -->
-    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    /* Контейнер для рендеринга сцены */
+    #container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
 
-    <!-- HTML Shader (для отображения iframe) -->
-    <script src="https://unpkg.com/aframe-html-shader@1.0.0/dist/aframe-html-shader.min.js"></script>
+    /* Блокировка событий iframe при взаимодействии с камерой */
+    #blocker {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Контейнер для рендеринга three.js -->
+  <div id="container"></div>
+  <!-- Блокировщик событий iframe -->
+  <div id="blocker"></div>
 
-    <style>
-      html,
-      body {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        background-color: #fff;
-        overflow: hidden;
-        user-select: none;
+  <!-- Импорт зависимостей three.js -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@v0.149.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.149.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    /**
+     * Инициализация 3D-сцены с виджетами
+     * @module widget3D
+     */
+    import * as THREE from 'three';
+    import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
+    import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+
+    /**
+     * Создает элемент с iframe для отображения виджета
+     * @param {Object} config - Конфигурация элемента
+     * @param {string} config.src - Ссылка на виджет (например, видео или другой iframe-контент)
+     * @param {number} config.x - Позиция по оси X
+     * @param {number} config.y - Позиция по оси Y
+     * @param {number} config.z - Позиция по оси Z
+     * @param {number} config.ry - Поворот по оси Y (радианы)
+     * @param {string} config.width - Ширина элемента (для div и iframe, например, '480px')
+     * @param {string} config.height - Высота элемента (для div и iframe, например, '360px')
+     * @param {string} config.backgroundColor - Цвет фона div (например, '#000')
+     * @returns {CSS3DObject} Объект для сцены
+     */
+    function createElement({ src, x, y, z, ry, width, height, backgroundColor }) {
+      const div = document.createElement('div');
+      div.style.width = width;
+      div.style.height = height;
+      div.style.backgroundColor = backgroundColor;
+
+      const iframe = document.createElement('iframe');
+      iframe.style.width = width;
+      iframe.style.height = height;
+      iframe.style.border = '0';
+      iframe.src = src;
+      div.appendChild(iframe);
+
+      const object = new CSS3DObject(div);
+      object.position.set(x, y, z);
+      object.rotation.y = ry;
+
+      return object;
+    }
+
+    /**
+     * Инициализация сцены, камеры, рендера и управления
+     * @returns {void}
+     */
+    function init() {
+      const container = document.getElementById('container');
+
+      // Настройка камеры
+      const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
+      camera.position.set(1000, 700, 1500);
+
+      // Создание сцены
+      const scene = new THREE.Scene();
+
+      // Настройка рендера
+      const renderer = new CSS3DRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      container.appendChild(renderer.domElement);
+
+      // Создание группы с виджетами
+      const group = new THREE.Group();
+      group.add(createElement({
+        src: 'https://t.me/f_channel_tg/22?embed=true',
+        x: 0,
+        y: 0,
+        z: 240,
+        ry: 0,
+        width: '480px',
+        height: '150px',
+        backgroundColor: 'transparent'
+      }));
+      group.add(createElement({
+        src: 'https://www.youtube.com/embed/Y2-xZ-1HE-Q?rel=0',
+        x: 240,
+        y: 0,
+        z: 0,
+        ry: Math.PI / 2,
+        width: '480px',
+        height: '360px',
+        backgroundColor: '#000'
+      }));
+      group.add(createElement({
+        src: 'https://telesco.pe/embed/f_channel_tg/23',
+        x: 0,
+        y: 0,
+        z: -240,
+        ry: Math.PI,
+        width: '480px',
+        height: '360px',
+        backgroundColor: 'transparent'
+      }));
+      group.add(createElement({
+        src: 'https://vkvideo.ru/video_ext.php?oid=276014824&id=456239069&hash=d4e4176bd8472af1',
+        x: -240,
+        y: 0,
+        z: 0,
+        ry: -Math.PI / 2,
+        width: '480px',
+        height: '360px',
+        backgroundColor: 'transparent'
+      }));
+      scene.add(group);
+
+      // Настройка управления камерой
+      const controls = new TrackballControls(camera, renderer.domElement);
+      controls.rotateSpeed = 4;
+
+      // Обработка изменения размера окна
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      // Блокировка событий iframe при взаимодействии с камерой
+      const blocker = document.getElementById('blocker');
+      controls.addEventListener('start', () => {
+        blocker.style.display = 'block';
+      });
+      controls.addEventListener('end', () => {
+        blocker.style.display = 'none';
+      });
+
+      // Анимация сцены
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
       }
 
-      a-scene {
-        width: 100%;
-        height: 100%;
-      }
+      animate();
+    }
 
-      .embedded-frame {
-        border: none;
-        width: 480px;
-        height: 360px;
-      }
-
-      #blocker {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: none;
-        background: transparent;
-        z-index: 10;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="blocker"></div>
-
-    <a-scene background="color: #ffffff">
-      <!-- Камера + управление -->
-      <a-entity
-        id="cameraRig"
-        position="0 1.6 6"
-        orbit-controls="
-          target: 0 1.5 0;
-          enableDamping: true;
-          dampingFactor: 0.05;
-          rotateSpeed: 0.3;
-          enableZoom: true;
-          autoRotate: true;
-          autoRotateSpeed: 0.5;
-        "
-      >
-        <a-camera></a-camera>
-      </a-entity>
-
-      <!-- Группа с виджетами -->
-      <a-entity id="widgets" position="0 1.5 0">
-        <!-- Telegram -->
-        <a-entity
-          geometry="primitive: plane; width: 4.8; height: 1.5"
-          material="shader: html; target: #iframe1"
-          position="0 0 -2.4"
-        ></a-entity>
-
-        <!-- YouTube -->
-        <a-entity
-          geometry="primitive: plane; width: 4.8; height: 3.6"
-          material="shader: html; target: #iframe2"
-          rotation="0 -90 0"
-          position="2.4 0 0"
-        ></a-entity>
-
-        <!-- Telegram (2) -->
-        <a-entity
-          geometry="primitive: plane; width: 4.8; height: 3.6"
-          material="shader: html; target: #iframe3"
-          rotation="0 180 0"
-          position="0 0 2.4"
-        ></a-entity>
-
-        <!-- VK Video -->
-        <a-entity
-          geometry="primitive: plane; width: 4.8; height: 3.6"
-          material="shader: html; target: #iframe4"
-          rotation="0 90 0"
-          position="-2.4 0 0"
-        ></a-entity>
-      </a-entity>
-    </a-scene>
-
-    <!-- скрытые iframe -->
-    <div style="display:none">
-      <iframe
-        id="iframe1"
-        class="embedded-frame"
-        src="https://t.me/f_channel_tg/22?embed=true"
-      ></iframe>
-
-      <iframe
-        id="iframe2"
-        class="embedded-frame"
-        src="https://www.youtube.com/embed/Y2-xZ-1HE-Q?rel=0"
-      ></iframe>
-
-      <iframe
-        id="iframe3"
-        class="embedded-frame"
-        src="https://telesco.pe/embed/f_channel_tg/23"
-      ></iframe>
-
-      <iframe
-        id="iframe4"
-        class="embedded-frame"
-        src="https://vkvideo.ru/video_ext.php?oid=276014824&id=456239069&hash=d4e4176bd8472af1"
-      ></iframe>
-    </div>
-
-    <!-- Подключаем Orbit Controls для A-Frame -->
-    <script src="https://cdn.jsdelivr.net/npm/aframe-orbit-controls-component@1.3.2/dist/aframe-orbit-controls-component.min.js"></script>
-
-    <script>
-      // блокировка iframe при вращении
-      const scene = document.querySelector("a-scene");
-      const blocker = document.getElementById("blocker");
-      const cameraRig = document.querySelector("#cameraRig");
-
-      let rotating = false;
-
-      scene.addEventListener("mousedown", () => {
-        rotating = true;
-        blocker.style.display = "block";
-      });
-
-      scene.addEventListener("mouseup", () => {
-        rotating = false;
-        blocker.style.display = "none";
-      });
-
-      scene.addEventListener("touchstart", () => {
-        rotating = true;
-        blocker.style.display = "block";
-      });
-
-      scene.addEventListener("touchend", () => {
-        rotating = false;
-        blocker.style.display = "none";
-      });
-
-      // Адаптивность — обновляем при изменении окна
-      window.addEventListener("resize", () => {
-        const canvas = scene.canvas;
-        if (canvas) {
-          canvas.width = window.innerWidth;
-          canvas.height = window.innerHeight;
-        }
-      });
-    </script>
-  </body>
+    // Запуск приложения
+    init();
+  </script>
+</body>
 </html>
