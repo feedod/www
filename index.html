@@ -94,18 +94,27 @@
 
       const object = new CSS3DObject(div);
 
-      // Автоматическое определение позиции и поворота
+      // Автоматическое определение позиции и поворота на основе размера
       const widthValue = parseFloat(width); // Извлекаем числовое значение ширины
-      const radius = widthValue * 1.5; // Радиус окружности на основе ширины
-      const angle = (elementCounter * Math.PI) / 2; // Угол для 4 элементов (0°, 90°, 180°, 270°)
+      const radius = widthValue * 0.75; // Половина длины ребра куба
 
-      // Позиции в плоскости XZ (y = 0)
-      object.position.set(
-        radius * Math.cos(angle), // x
-        0, // y
-        radius * Math.sin(angle) // z
-      );
-      object.rotation.y = -angle; // Поворот лицом к центру
+      // Определение граней куба: позиция (x, y, z) и повороты (rx, ry)
+      const cubeFaces = [
+        { x: 0, y: 0, z: radius, rx: 0, ry: 0 }, // Передняя грань
+        { x: 0, y: 0, z: -radius, rx: 0, ry: Math.PI }, // Задняя грань
+        { x: -radius, y: 0, z: 0, rx: 0, ry: -Math.PI / 2 }, // Левая грань
+        { x: radius, y: 0, z: 0, rx: 0, ry: Math.PI / 2 }, // Правая грань
+        { x: 0, y: radius, z: 0, rx: -Math.PI / 2, ry: 0 }, // Верхняя грань
+        { x: 0, y: -radius, z: 0, rx: Math.PI / 2, ry: 0 } // Нижняя грань
+      ];
+
+      // Выбор грани по индексу элемента (максимум 6 граней)
+      const face = cubeFaces[Math.min(elementCounter, cubeFaces.length - 1)];
+
+      // Установка позиции и поворотов
+      object.position.set(face.x, face.y, face.z);
+      object.rotation.x = face.rx || 0; // Поворот по X (для верхней/нижней грани)
+      object.rotation.y = face.ry || 0; // Поворот по Y
 
       elementCounter++; // Увеличиваем счетчик для следующего элемента
 
@@ -157,6 +166,19 @@
         height: '360px',
         backgroundColor: '#000'
       }));
+      // Добавьте дополнительные виджеты (до 6) при необходимости, например:
+      // group.add(createElement({
+      //   src: 'https://www.youtube.com/embed/ANOTHER_ID?rel=0',
+      //   width: '480px',
+      //   height: '360px',
+      //   backgroundColor: '#000'
+      // }));
+      // group.add(createElement({
+      //   src: 'https://www.youtube.com/embed/ANOTHER_ID?rel=0',
+      //   width: '480px',
+      //   height: '360px',
+      //   backgroundColor: '#000'
+      // }));
       scene.add(group);
 
       // Настройка управления камерой
