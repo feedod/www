@@ -116,7 +116,7 @@
       // Выбор грани по индексу элемента (максимум 6 граней)
       const face = cubeFaces[Math.min(elementCounter, cubeFaces.length - 1)];
 
-      // Установка позиции и поворотов (позиции будут масштабированы позже)
+      // Установка позиции и поворотов
       object.position.set(face.x, face.y, face.z);
       object.rotation.x = face.rx || 0;
       object.rotation.y = face.ry || 0;
@@ -133,7 +133,7 @@
      * @returns {void}
      */
     function createCubeEdges(group, radius) {
-      const material = new THREE.LineBasicMaterial({ color: 0xffffff }); // Белые линии
+      const material = new THREE.LineBasicMaterial({ color: 0x808080 }); // Серые линии
       const vertices = [
         // Вершины куба
         new THREE.Vector3(-radius, -radius, -radius),
