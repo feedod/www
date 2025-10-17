@@ -85,7 +85,12 @@
       if (!src || !width || !height || !backgroundColor) {
         throw new Error('Все параметры (src, width, height, backgroundColor) должны быть указаны');
       }
-      if (isNaN(parseFloat(width)) || isNaN(parseFloat(height))) {
+      if (!width.endsWith('px') || !height.endsWith('px')) {
+        throw new Error('Ширина и высота должны быть указаны в пикселях (например, "480px")');
+      }
+      const widthValue = parseFloat(width);
+      const heightValue = parseFloat(height);
+      if (isNaN(widthValue) || isNaN(heightValue)) {
         throw new Error('Ширина и высота должны быть числовыми значениями (например, "480px")');
       }
 
@@ -123,7 +128,7 @@
 
       elementCounter++; // Увеличиваем счетчик
 
-      return { object, width: parseFloat(width) }; // Возвращаем объект и ширину
+      return { object, width: widthValue }; // Возвращаем объект и ширину
     }
 
     /**
@@ -168,9 +173,9 @@
     function init() {
       const container = document.getElementById('container');
 
-      // Настройка камеры (увеличенное расстояние)
+      // Настройка камеры (ещё дальше)
       const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
-      camera.position.set(750, 525, 1125); // Увеличено в 1.5 раза от (500, 350, 750)
+      camera.position.set(1000, 700, 1500); // Увеличено в 2 раза от (500, 350, 750)
 
       // Создание сцены
       const scene = new THREE.Scene();
