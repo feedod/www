@@ -15,6 +15,10 @@
       height: 100%;
       background-color: #ffffff;
       overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
     }
 
     /* Контейнер для рендеринга сцены */
@@ -35,14 +39,6 @@
       width: 100%;
       height: 100%;
       display: none;
-    }
-
-    /* Отключение выделения текста в iframe */
-    iframe {
-      user-select: none;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
     }
   </style>
 </head>
@@ -71,20 +67,19 @@
     import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
     import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 
+    // Счетчик для отслеживания количества созданных элементов
+    let elementCounter = 0;
+
     /**
      * Создает элемент с iframe для отображения виджета
      * @param {Object} config - Конфигурация элемента
      * @param {string} config.src - Ссылка на виджет (например, видео или другой iframe-контент)
-     * @param {number} config.x - Позиция по оси X
-     * @param {number} config.y - Позиция по оси Y
-     * @param {number} config.z - Позиция по оси Z
-     * @param {number} config.ry - Поворот по оси Y (радианы)
      * @param {string} config.width - Ширина элемента (для div и iframe, например, '480px')
      * @param {string} config.height - Высота элемента (для div и iframe, например, '360px')
      * @param {string} config.backgroundColor - Цвет фона div (например, '#000')
      * @returns {CSS3DObject} Объект для сцены
      */
-    function createElement({ src, x, y, z, ry, width, height, backgroundColor }) {
+    function createElement({ src, width, height, backgroundColor }) {
       const div = document.createElement('div');
       div.style.width = width;
       div.style.height = height;
@@ -98,8 +93,21 @@
       div.appendChild(iframe);
 
       const object = new CSS3DObject(div);
-      object.position.set(x, y, z);
-      object.rotation.y = ry;
+
+      // Автоматическое определение позиции и поворота
+      const widthValue = parseFloat(width); // Извлекаем числовое значение ширины
+      const radius = widthValue * 1.5; // Радиус окружности на основе ширины
+      const angle = (elementCounter * Math.PI) / 2; // Угол для 4 элементов (0°, 90°, 180°, 270°)
+
+      // Позиции в плоскости XZ (y = 0)
+      object.position.set(
+        radius * Math.cos(angle), // x
+        0, // y
+        radius * Math.sin(angle) // z
+      );
+      object.rotation.y = -angle; // Поворот лицом к центру
+
+      elementCounter++; // Увеличиваем счетчик для следующего элемента
 
       return object;
     }
@@ -127,40 +135,24 @@
       const group = new THREE.Group();
       group.add(createElement({
         src: 'https://www.youtube.com/embed/SJOz3qjfQXU?rel=0',
-        x: 0,
-        y: 0,
-        z: 240,
-        ry: 0,
         width: '480px',
         height: '360px',
         backgroundColor: '#000'
       }));
       group.add(createElement({
         src: 'https://www.youtube.com/embed/Y2-xZ-1HE-Q?rel=0',
-        x: 240,
-        y: 0,
-        z: 0,
-        ry: Math.PI / 2,
         width: '480px',
         height: '360px',
         backgroundColor: '#000'
       }));
       group.add(createElement({
         src: 'https://www.youtube.com/embed/IrydklNpcFI?rel=0',
-        x: 0,
-        y: 0,
-        z: -240,
-        ry: Math.PI,
         width: '480px',
         height: '360px',
         backgroundColor: '#000'
       }));
       group.add(createElement({
         src: 'https://www.youtube.com/embed/9ubytEsCaS0?rel=0',
-        x: -240,
-        y: 0,
-        z: 0,
-        ry: -Math.PI / 2,
         width: '480px',
         height: '360px',
         backgroundColor: '#000'
