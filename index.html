@@ -40,6 +40,21 @@
       height: 100%;
       display: none;
     }
+
+    /* Стили для интерактивных точек */
+    .interactive-point {
+      width: 20px;
+      height: 20px;
+      background-color: #808080;
+      border-radius: 50%;
+      opacity: 0.5;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+
+    .interactive-point:hover {
+      transform: scale(1.2);
+      background-color: #cccccc;
+    }
   </style>
 </head>
 <body>
@@ -132,31 +147,34 @@
     }
 
     /**
-     * Создает каркас куба (ребра и углы) для соединения граней
-     * @param {THREE.Group} group - Группа для добавления ребер и углов
+     * Создает каркас куба (ребра, углы, интерактивные точки)
+     * @param {THREE.Group} group - Группа для добавления элементов
      * @param {number} radius - Половина длины ребра куба
-     * @returns {void}
+     * @param {THREE.Scene} scene - Сцена для добавления интерактивных элементов
+     * @param {THREE.Camera} camera - Камера для raycaster
+     * @param {THREE.Raycaster} raycaster - Raycaster для обработки событий мыши
+     * @returns {Object} Массив интерактивных точек
      */
-    function createCubeFrame(group, radius) {
+    function createCubeFrame(group, radius, scene, camera, raycaster) {
       // Ребра куба
       const lineMaterial = new THREE.LineBasicMaterial({ color: 0x808080 }); // Серые линии
       const vertices = [
         // Вершины куба
-        new THREE.Vector3(-radius, -radius, -radius),
-        new THREE.Vector3(radius, -radius, -radius),
-        new THREE.Vector3(radius, radius, -radius),
-        new THREE.Vector3(-radius, radius, -radius),
-        new THREE.Vector3(-radius, -radius, radius),
-        new THREE.Vector3(radius, -radius, radius),
-        new THREE.Vector3(radius, radius, radius),
-        new THREE.Vector3(-radius, radius, radius)
+        new THREE.Vector3(-radius, -radius, -radius), // 0
+        new THREE.Vector3(radius, -radius, -radius),  // 1
+        new THREE.Vector3(radius, radius, -radius),   // 2
+        new THREE.Vector3(-radius, radius, -radius),  // 3
+        new THREE.Vector3(-radius, -radius, radius),  // 4
+        new THREE.Vector3(radius, -radius, radius),   // 5
+        new THREE.Vector3(radius, radius, radius),    // 6
+        new THREE.Vector3(-radius, radius, radius)    // 7
       ];
 
       // Ребра куба (индексы вершин для соединения)
       const edges = [
         [0, 1], [1, 2], [2, 3], [3, 0], // Нижняя грань
         [4, 5], [5, 6], [6, 7], [7, 4], // Верхняя грань
-        [0, 4], [1, 5], [2, 6], [3, 7] // Боковые ребра
+        [0, 4], [1, 5], [2, 6], [3, 7]  // Боковые ребра
       ];
 
       edges.forEach(([start, end]) => {
@@ -165,18 +183,36 @@
         group.add(line);
       });
 
-      // Углы куба (2D-круги)
+      // Углы куба (маленькие кубы, только 3 на передней грани)
       const cornerSize = radius * 0.1; // Размер углов (10% от радиуса куба)
-      vertices.forEach(vertex => {
+      const cornerVertices = [vertices[4], vertices[6], vertices[7]]; // Передние углы
+      cornerVertices.forEach(vertex => {
         const cornerDiv = document.createElement('div');
         cornerDiv.style.width = `${cornerSize}px`;
         cornerDiv.style.height = `${cornerSize}px`;
         cornerDiv.style.backgroundColor = '#808080'; // Серый цвет
-        cornerDiv.style.borderRadius = '50%'; // Круглая форма
+        cornerDiv.style.transform = 'rotateY(45deg) rotateX(45deg)'; // 3D-эффект куба
         const cornerObject = new CSS3DObject(cornerDiv);
         cornerObject.position.copy(vertex);
         group.add(cornerObject);
       });
+
+      // Интерактивные точки на задней грани
+      const interactivePoints = [];
+      const pointSize = 20; // Фиксированный размер точек
+      const backVertices = [vertices[0], vertices[1], vertices[2], vertices[3]]; // Задняя грань
+      backVertices.forEach(vertex => {
+        const pointDiv = document.createElement('div');
+        pointDiv.className = 'interactive-point';
+        pointDiv.style.width = `${pointSize}px`;
+        pointDiv.style.height = `${pointSize}px`;
+        const pointObject = new CSS3DObject(pointDiv);
+        pointObject.position.copy(vertex);
+        group.add(pointObject);
+        interactivePoints.push(pointObject);
+      });
+
+      return { interactivePoints };
     }
 
     /**
@@ -207,6 +243,10 @@
       controls.minDistance = 500;
       controls.maxDistance = 3000;
 
+      // Настройка raycaster для интерактивности
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+
       // Создание группы с виджетами
       const group = new THREE.Group();
       let maxWidth = 0;
@@ -221,13 +261,13 @@
         },
         {
           src: 'https://www.youtube.com/embed/Y2-xZ-1HE-Q?rel=0',
-          width: '400px', // Разный размер
+          width: '400px',
           height: '300px',
           backgroundColor: '#000'
         },
         {
           src: 'https://www.youtube.com/embed/IrydklNpcFI?rel=0',
-          width: '520px', // Разный размер
+          width: '520px',
           height: '390px',
           backgroundColor: '#000'
         },
@@ -236,20 +276,19 @@
           width: '480px',
           height: '360px',
           backgroundColor: '#000'
+        },
+        {
+          src: 'https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0', // Пример для 5-го виджета
+          width: '500px',
+          height: '375px',
+          backgroundColor: '#000'
+        },
+        {
+          src: 'https://www.youtube.com/embed/3tmd-ClpJxA?rel=0', // Пример для 6-го виджета
+          width: '450px',
+          height: '338px',
+          backgroundColor: '#000'
         }
-        // Добавьте дополнительные виджеты (до 6) при необходимости, например:
-        // {
-        //   src: 'https://www.youtube.com/embed/ANOTHER_ID?rel=0',
-        //   width: '500px',
-        //   height: '375px',
-        //   backgroundColor: '#000'
-        // },
-        // {
-        //   src: 'https://www.youtube.com/embed/ANOTHER_ID?rel=0',
-        //   width: '450px',
-        //   height: '338px',
-        //   backgroundColor: '#000'
-        // }
       ];
 
       // Проверка количества виджетов
@@ -281,8 +320,8 @@
         group.add(object);
       });
 
-      // Добавление каркаса куба (ребра и углы)
-      createCubeFrame(group, radius);
+      // Добавление каркаса куба (ребра, углы, интерактивные точки)
+      const { interactivePoints } = createCubeFrame(group, radius, scene, camera, raycaster);
 
       scene.add(group);
 
@@ -305,6 +344,30 @@
       controls.addEventListener('end', () => {
         blocker.style.display = 'none';
       });
+
+      // Обработка событий мыши для интерактивных точек
+      function onMouseMove(event) {
+        // Нормализация координат мыши
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        // Обновление raycaster
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(interactivePoints);
+
+        // Сброс стилей всех точек
+        interactivePoints.forEach(point => {
+          point.element.style.transform = 'scale(1)';
+          point.element.style.backgroundColor = '#808080';
+        });
+
+        // Применение стилей к точкам под курсором
+        intersects.forEach(intersect => {
+          intersect.object.element.style.transform = 'scale(1.2)';
+          intersect.object.element.style.backgroundColor = '#cccccc';
+        });
+      }
+      window.addEventListener('mousemove', onMouseMove);
 
       // Анимация сцены
       function animate() {
