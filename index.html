@@ -67,33 +67,20 @@
     import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
     import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 
-    // Счетчик для отслеживания количества созданных элементов
-    let elementCounter = 0;
-
     /**
      * Создает элемент с iframe для отображения виджета
      * @param {Object} config - Конфигурация элемента
      * @param {string} config.src - Ссылка на виджет (например, видео или другой iframe-контент)
+     * @param {number} config.x - Позиция по оси X
+     * @param {number} config.y - Позиция по оси Y
+     * @param {number} config.z - Позиция по оси Z
+     * @param {number} config.ry - Поворот по оси Y (радианы)
      * @param {string} config.width - Ширина элемента (для div и iframe, например, '480px')
      * @param {string} config.height - Высота элемента (для div и iframe, например, '360px')
      * @param {string} config.backgroundColor - Цвет фона div (например, '#000')
-     * @returns {Object} Объект сцены и ширина виджета
-     * @throws {Error} Если параметры отсутствуют или некорректны
+     * @returns {CSS3DObject} Объект для сцены
      */
-    function createElement({ src, width, height, backgroundColor }) {
-      // Проверка входных параметров
-      if (!src || !width || !height || !backgroundColor) {
-        throw new Error('Все параметры (src, width, height, backgroundColor) должны быть указаны');
-      }
-      if (!width.endsWith('px') || !height.endsWith('px')) {
-        throw new Error('Ширина и высота должны быть указаны в пикселях (например, "480px")');
-      }
-      const widthValue = parseFloat(width);
-      const heightValue = parseFloat(height);
-      if (isNaN(widthValue) || isNaN(heightValue)) {
-        throw new Error('Ширина и высота должны быть числовыми значениями (например, "480px")');
-      }
-
+    function createElement({ src, x, y, z, ry, width, height, backgroundColor }) {
       const div = document.createElement('div');
       div.style.width = width;
       div.style.height = height;
@@ -107,41 +94,22 @@
       div.appendChild(iframe);
 
       const object = new CSS3DObject(div);
+      object.position.set(x, y, z);
+      object.rotation.y = ry;
 
-      // Определение граней куба: позиция (x, y, z) и повороты (rx, ry)
-      const cubeFaces = [
-        { x: 0, y: 0, z: 1, rx: 0, ry: 0 }, // Передняя грань
-        { x: 0, y: 0, z: -1, rx: 0, ry: Math.PI }, // Задняя грань
-        { x: -1, y: 0, z: 0, rx: 0, ry: -Math.PI / 2 }, // Левая грань
-        { x: 1, y: 0, z: 0, rx: 0, ry: Math.PI / 2 }, // Правая грань
-        { x: 0, y: 1, z: 0, rx: -Math.PI / 2, ry: 0 }, // Верхняя грань
-        { x: 0, y: -1, z: 0, rx: Math.PI / 2, ry: 0 } // Нижняя грань
-      ];
-
-      // Выбор грани по индексу элемента (максимум 6 граней)
-      const face = cubeFaces[Math.min(elementCounter, cubeFaces.length - 1)];
-
-      // Установка позиции и поворотов
-      object.position.set(face.x, face.y, face.z);
-      object.rotation.x = face.rx || 0;
-      object.rotation.y = face.ry || 0;
-
-      elementCounter++; // Увеличиваем счетчик
-
-      return { object, width: widthValue }; // Возвращаем объект и ширину
+      return object;
     }
 
     /**
      * Инициализация сцены, камеры, рендера и управления
      * @returns {void}
-     * @throws {Error} Если количество виджетов вне диапазона 4–6
      */
     function init() {
       const container = document.getElementById('container');
 
       // Настройка камеры
       const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
-      camera.position.set(1000, 700, 1500); // Увеличено в 2 раза от (500, 350, 750)
+      camera.position.set(500, 350, 750);
 
       // Создание сцены
       const scene = new THREE.Scene();
@@ -149,101 +117,62 @@
       // Настройка рендера
       const renderer = new CSS3DRenderer();
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.domElement.style.width = '100%';
-      renderer.domElement.style.height = '100%';
       container.appendChild(renderer.domElement);
+
+      // Создание группы с виджетами
+      const group = new THREE.Group();
+      group.add(createElement({
+        src: 'https://www.youtube.com/embed/SJOz3qjfQXU?rel=0',
+        x: 0,
+        y: 0,
+        z: 240,
+        ry: 0,
+        width: '480px',
+        height: '360px',
+        backgroundColor: '#000'
+      }));
+      group.add(createElement({
+        src: 'https://www.youtube.com/embed/Y2-xZ-1HE-Q?rel=0',
+        x: 240,
+        y: 0,
+        z: 0,
+        ry: Math.PI / 2,
+        width: '480px',
+        height: '360px',
+        backgroundColor: '#000'
+      }));
+      group.add(createElement({
+        src: 'https://www.youtube.com/embed/IrydklNpcFI?rel=0',
+        x: 0,
+        y: 0,
+        z: -240,
+        ry: Math.PI,
+        width: '480px',
+        height: '360px',
+        backgroundColor: '#000'
+      }));
+      group.add(createElement({
+        src: 'https://www.youtube.com/embed/9ubytEsCaS0?rel=0',
+        x: -240,
+        y: 0,
+        z: 0,
+        ry: -Math.PI / 2,
+        width: '480px',
+        height: '360px',
+        backgroundColor: '#000'
+      }));
+      scene.add(group);
 
       // Настройка управления камерой
       const controls = new TrackballControls(camera, renderer.domElement);
       controls.rotateSpeed = 4;
-      controls.minDistance = 500;
-      controls.maxDistance = 3000;
 
-      // Создание группы с виджетами
-      const group = new THREE.Group();
-      let maxWidth = 0;
-
-      // Определение виджетов
-      const widgets = [
-        {
-          src: 'https://www.youtube.com/embed/SJOz3qjfQXU?rel=0',
-          width: '480px',
-          height: '360px',
-          backgroundColor: '#000'
-        },
-        {
-          src: 'https://www.youtube.com/embed/Y2-xZ-1HE-Q?rel=0',
-          width: '400px',
-          height: '300px',
-          backgroundColor: '#000'
-        },
-        {
-          src: 'https://www.youtube.com/embed/IrydklNpcFI?rel=0',
-          width: '520px',
-          height: '390px',
-          backgroundColor: '#000'
-        },
-        {
-          src: 'https://www.youtube.com/embed/9ubytEsCaS0?rel=0',
-          width: '480px',
-          height: '360px',
-          backgroundColor: '#000'
-        },
-        {
-          src: 'https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0', // 5-й виджет
-          width: '500px',
-          height: '375px',
-          backgroundColor: '#000'
-        },
-        {
-          src: 'https://www.youtube.com/embed/3tmd-ClpJxA?rel=0', // 6-й виджет
-          width: '450px',
-          height: '338px',
-          backgroundColor: '#000'
-        }
-      ];
-
-      // Проверка количества виджетов
-      if (widgets.length < 4 || widgets.length > 6) {
-        throw new Error('Количество виджетов должно быть от 4 до 6');
-      }
-
-      // Добавление виджетов и расчет максимальной ширины
-      const widgetObjects = widgets.map(widget => {
-        const { object, width } = createElement(widget);
-        maxWidth = Math.max(maxWidth, width);
-        return object;
-      });
-
-      // Масштабирование позиций виджетов на основе максимальной ширины
-      const radius = maxWidth * 0.5; // Уменьшено с 0.75 до 0.5 для устранения промежутка
-      widgetObjects.forEach((object, index) => {
-        const face = [
-          { x: 0, y: 0, z: radius, rx: 0, ry: 0 }, // Передняя
-          { x: 0, y: 0, z: -radius, rx: 0, ry: Math.PI }, // Задняя
-          { x: -radius, y: 0, z: 0, rx: 0, ry: -Math.PI / 2 }, // Левая
-          { x: radius, y: 0, z: 0, rx: 0, ry: Math.PI / 2 }, // Правая
-          { x: 0, y: radius, z: 0, rx: -Math.PI / 2, ry: 0 }, // Верхняя
-          { x: 0, y: -radius, z: 0, rx: Math.PI / 2, ry: 0 } // Нижняя
-        ][index];
-        object.position.set(face.x, face.y, face.z);
-        object.rotation.x = face.rx || 0;
-        object.rotation.y = face.ry || 0;
-        group.add(object);
-      });
-
-      scene.add(group);
-
-      // Обработка изменения размера окна и масштабирования
-      function onWindowResize() {
+      // Обработка изменения размера окна
+      window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.domElement.style.width = '100%';
-        renderer.domElement.style.height = '100%';
-        controls.handleResize(); // Обновление управления
-      }
-      window.addEventListener('resize', onWindowResize);
+      });
 
       // Блокировка событий iframe при взаимодействии с камерой
       const blocker = document.getElementById('blocker');
@@ -264,13 +193,8 @@
       animate();
     }
 
-    // Запуск приложения с обработкой ошибок
-    try {
-      init();
-    } catch (error) {
-      console.error('Ошибка инициализации:', error.message);
-      alert(`Ошибка: ${error.message}`);
-    }
+    // Запуск приложения
+    init();
   </script>
 </body>
 </html>
