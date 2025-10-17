@@ -165,13 +165,17 @@
         group.add(line);
       });
 
-      // Углы куба (сферы в вершинах)
-      const sphereGeometry = new THREE.SphereGeometry(radius * 0.05, 16, 16); // Радиус сферы 5% от радиуса куба
-      const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 }); // Серый цвет
+      // Углы куба (2D-круги)
+      const cornerSize = radius * 0.1; // Размер углов (10% от радиуса куба)
       vertices.forEach(vertex => {
-        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-        sphere.position.copy(vertex);
-        group.add(sphere);
+        const cornerDiv = document.createElement('div');
+        cornerDiv.style.width = `${cornerSize}px`;
+        cornerDiv.style.height = `${cornerSize}px`;
+        cornerDiv.style.backgroundColor = '#808080'; // Серый цвет
+        cornerDiv.style.borderRadius = '50%'; // Круглая форма
+        const cornerObject = new CSS3DObject(cornerDiv);
+        cornerObject.position.copy(vertex);
+        group.add(cornerObject);
       });
     }
 
@@ -183,7 +187,7 @@
     function init() {
       const container = document.getElementById('container');
 
-      // Настройка камеры (ещё дальше)
+      // Настройка камеры
       const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
       camera.position.set(1000, 700, 1500); // Увеличено в 2 раза от (500, 350, 750)
 
